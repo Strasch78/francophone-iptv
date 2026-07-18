@@ -1,0 +1,17 @@
+# Environnement virtuel Python
+ramoverse/
+venv/
+env/
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# Fichiers de test générés localement (pas besoin dans le dépôt,
+# seul output/francophone.m3u généré par le workflow doit y être)
+chaines_720p.m3u
+chaines_1080p.m3u
+liste_francophone.m3u
+
+# VS Code
+.vscode/

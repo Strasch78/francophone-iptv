@@ -1,0 +1,52 @@
+name: Update francophone playlist
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # toutes les 6 heures
+  workflow_dispatch:          # bouton "Run workflow" manuel sur GitHub
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  update-playlist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install requests
+
+      - name: Générer la playlist francophone
+        run: python filtrer_francophone.py
+
+      - name: Commit du fichier mis à jour
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/francophone.m3u
+          git diff --quiet --cached || git commit -m "Update francophone playlist"
+          git push
+
+      - name: Configurer GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Uploader l'artefact Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: output
+
+      - name: Déployer sur GitHub Pages
+        uses: actions/deploy-pages@v4
