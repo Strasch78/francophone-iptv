@@ -7,14 +7,22 @@ env/
 __pycache__/
 *.pyc
 
-# Fichiers de test générés localement (pas besoin dans le dépôt,
-# seul output/francophone.m3u généré par le workflow doit y être)
-chaines_720p.m3u
-chaines_1080p.m3u
-liste_francophone.m3u
+# Fichiers de test générés localement lors du développement
+/chaines_720p.m3u
+/chaines_1080p.m3u
+/liste_francophone.m3u
+
+# Playlists générées (par le script en local OU par le workflow) :
+# régénérées à chaque run et déployées sur GitHub Pages via l'artefact
+# actions/upload-pages-artifact + deploy-pages, PAS en lisant les fichiers
+# du dépôt git. Inutile donc de les committer -> ça évite les diffs/
+# conflits à chaque fois que le script tourne en local ou via le cron.
+output/*
+!output/.gitkeep
 
 # VS Code
-.vscode/mise à jour/
+.vscode/
+
+# Brouillons / anciens essais / archives locales
 mise à jour/
 *.zip
-

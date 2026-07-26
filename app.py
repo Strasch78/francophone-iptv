@@ -16,10 +16,12 @@ from filtrer_francophone import (
     URL_ROMAXA,
     URL_IPTV_ORG,
     CATEGORIES,
+    VERIFIER_FLUX_BONUS,
     telecharger_source,
     extraire_chaines,
     extraire_chaines_iptvorg,
     fusionner_sources,
+    filtrer_chaines_actives,
     dedupliquer,
     categoriser_chaine,
     nom_fichier_valide,
@@ -59,6 +61,18 @@ def rafraichir(force_refresh: bool = False) -> None:
         chaines_romaxa = extraire_chaines(lignes_romaxa) if lignes_romaxa is not None else []
         chaines_iptvorg = extraire_chaines_iptvorg(lignes_iptvorg) if lignes_iptvorg is not None else []
         chaines, bonus = fusionner_sources(chaines_romaxa, chaines_iptvorg)
+
+        if VERIFIER_FLUX_BONUS and bonus:
+            print(f"[refresh] Vérification de {len(bonus)} flux bonus iptv-org "
+                  f"(ça peut prendre quelques dizaines de secondes)...")
+            bonus_actifs, bonus_morts = filtrer_chaines_actives(bonus)
+            if bonus_morts:
+                print(f"[refresh] {len(bonus_morts)} chaînes bonus retirées "
+                      f"(flux injoignable) : "
+                      f"{', '.join(c['nom'] for c in bonus_morts[:10])}"
+                      + (f", ..." if len(bonus_morts) > 10 else ""))
+            chaines = chaines_romaxa + bonus_actifs
+            bonus = bonus_actifs
 
         _cache["chaines"] = chaines
         _cache["chaines_uniques"] = dedupliquer(chaines)

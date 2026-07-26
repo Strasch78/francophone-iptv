@@ -26,6 +26,7 @@ import re
 import time
 import unicodedata
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 URL_ROMAXA = "https://romaxa55.github.io/world_ip_tv/output/index.m3u"
 URL_IPTV_ORG = "https://iptv-org.github.io/iptv/languages/fra.m3u"
@@ -35,6 +36,14 @@ DOSSIER_PAR_PAYS = f"{DOSSIER_SORTIE}/par_pays"
 DOSSIER_PAR_CATEGORIE = f"{DOSSIER_SORTIE}/par_categorie"
 FICHIER_TOUTES_CATEGORIES = f"{DOSSIER_SORTIE}/toutes_categories.m3u"
 FICHIER_BONUS_IPTVORG = f"{DOSSIER_SORTIE}/bonus_iptv_org.m3u"
+
+# Vérification des flux : activée par défaut pour les chaînes iptv-org
+# (bonus) uniquement -- Romaxa est déjà vérifiée toutes les 6h côté source,
+# inutile de la revérifier ici. Peut être désactivée via la variable
+# d'environnement VERIFIER_FLUX_BONUS=0 (utile si tu exécutes le script
+# depuis un environnement dont l'IP est fréquemment bloquée par les
+# fournisseurs, ce qui fausserait le résultat).
+VERIFIER_FLUX_BONUS = os.environ.get("VERIFIER_FLUX_BONUS", "1") != "0"
 
 # Pays par défaut attribué aux chaînes bonus iptv-org dont le group-title
 # d'origine ne correspond à aucun pays francophone reconnu (ex: iptv-org
@@ -800,6 +809,76 @@ def fusionner_sources(chaines_romaxa: list[dict], chaines_iptvorg: list[dict]) -
     return chaines_romaxa + bonus, bonus
 
 
+# ---------------------------------------------------------------------------
+# Vérification des flux (chaînes réellement accessibles)
+# ---------------------------------------------------------------------------
+#
+# ATTENTION à un piège classique : le résultat de cette vérification dépend
+# ÉNORMÉMENT d'où elle est exécutée. Beaucoup de fournisseurs IPTV bloquent
+# les IP de datacenter (AWS, Azure, GCP...) même quand le flux fonctionne
+# très bien pour un vrai spectateur sur une connexion résidentielle. Or les
+# runners GitHub Actions tournent sur Azure. Exécuter cette vérification
+# depuis le workflow risque donc de supprimer des chaînes qui marchent en
+# réalité, juste parce que l'IP du runner est bloquée.
+#
+# -> Il est recommandé d'exécuter `python filtrer_francophone.py` avec la
+#    vérification activée depuis une connexion "normale" (ta machine, ta
+#    box), pas uniquement depuis GitHub Actions.
+
+def verifier_flux(url: str, timeout: float = 6.0) -> bool:
+    """Teste si un flux répond, sans télécharger tout le flux (juste les
+    en-têtes + un petit bout du corps). Renvoie True si le flux semble
+    accessible."""
+    try:
+        with requests.get(
+            url, timeout=timeout, stream=True,
+            headers={"User-Agent": "Mozilla/5.0"},
+            allow_redirects=True,
+        ) as r:
+            if r.status_code >= 400:
+                return False
+            # On lit un tout petit peu pour confirmer qu'il y a bien des
+            # données qui arrivent (certains serveurs renvoient 200 puis
+            # ne renvoient jamais rien).
+            next(r.iter_content(chunk_size=512), None)
+            return True
+    except requests.exceptions.RequestException:
+        return False
+    except StopIteration:
+        return True  # flux vide mais connexion OK (rare, on ne pénalise pas)
+
+
+def filtrer_chaines_actives(chaines: list[dict], max_threads: int = 30, timeout: float = 6.0) -> tuple[list[dict], list[dict]]:
+    """Vérifie en parallèle chaque chaîne et ne garde que celles qui
+    répondent. Renvoie (chaines_actives, chaines_mortes_retirees)."""
+    actives, mortes = [], []
+    total = len(chaines)
+    print(f"   Vérification de {total} flux (jusqu'à {max_threads} en parallèle, "
+          f"timeout {timeout}s)...")
+    debut = time.time()
+
+    with ThreadPoolExecutor(max_workers=max_threads) as executeur:
+        futur_vers_chaine = {
+            executeur.submit(verifier_flux, c["url"], timeout): c for c in chaines
+        }
+        traitees = 0
+        for futur in as_completed(futur_vers_chaine):
+            c = futur_vers_chaine[futur]
+            traitees += 1
+            if futur.result():
+                actives.append(c)
+            else:
+                mortes.append(c)
+            if traitees % 100 == 0 or traitees == total:
+                print(f"      ... {traitees}/{total} vérifiées "
+                      f"({len(actives)} actives, {len(mortes)} mortes)")
+
+    duree = time.time() - debut
+    print(f"   -> {len(actives)}/{total} chaînes actives "
+          f"({len(mortes)} retirées) en {duree:.0f}s")
+    return actives, mortes
+
+
 
 
 
@@ -913,6 +992,17 @@ def main():
     print("3. Fusion des deux sources (Romaxa prioritaire en cas de doublon)...")
     chaines, bonus = fusionner_sources(chaines_romaxa, chaines_iptvorg)
     print(f"   -> {len(bonus)} chaînes ajoutées en bonus depuis iptv-org")
+
+    if VERIFIER_FLUX_BONUS and bonus:
+        print("3bis. Vérification des flux bonus iptv-org (Romaxa déjà vérifiée "
+              "à la source)...")
+        bonus_actifs, bonus_morts = filtrer_chaines_actives(bonus)
+        if bonus_morts:
+            print(f"    Chaînes bonus retirées (flux injoignable) : "
+                  f"{', '.join(c['nom'] for c in bonus_morts[:15])}"
+                  + (f", ... (+{len(bonus_morts) - 15})" if len(bonus_morts) > 15 else ""))
+        chaines = chaines_romaxa + bonus_actifs
+        bonus = bonus_actifs
 
     print("4. Génération des fichiers par pays...")
     stats_pays = generer_par_pays(chaines)
