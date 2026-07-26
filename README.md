@@ -2,20 +2,46 @@
 
 Ce projet extrait, dédoublonne et classe les chaînes **francophones** (France,
 Belgique, Suisse, Canada/Québec, DOM-TOM, et pays d'Afrique/Caraïbes
-francophones) à partir de la playlist M3U mondiale publiée par
-[romaxa55/world_ip_tv](https://github.com/romaxa55/world_ip_tv).
+francophones) à partir de **deux sources fusionnées** :
 
-À partir de cette source unique, deux jeux de playlists sont générés :
+- **[romaxa55/world_ip_tv](https://github.com/romaxa55/world_ip_tv)** — source
+  principale, vérifiée toutes les 6h côté source (chaînes mortes retirées
+  automatiquement).
+- **[iptv-org (langue française)](https://iptv-org.github.io/iptv/languages/fra.m3u)**
+  — source secondaire, utilisée en complément.
+
+À partir de cette fusion, deux jeux de playlists sont générés :
 
 - **Par pays** — une playlist par pays francophone.
 - **Par catégorie** — les mêmes chaînes, mais rangées par thème (Sport,
   Musique, Actualités, Jeunesse, etc.).
 
-Les deux versions sont **dédupliquées** : dans la source d'origine, une même
+Les deux versions sont **dédupliquées** : dans la source Romaxa, une même
 chaîne (même flux) est souvent listée sous plusieurs pays à la fois (ex. KTO
 apparaît sous France, Belgique ET Suisse). Le script ne garde qu'une seule
 occurrence de chaque chaîne, en se basant sur l'URL du flux, qui est le seul
 identifiant réellement fiable.
+
+## Fusion des deux sources
+
+Romaxa est **prioritaire** : elle est vérifiée toutes les 6h (chaînes mortes
+retirées), donc en cas de doublon entre les deux sources, c'est toujours la
+version Romaxa qui est conservée. Le rapprochement entre les deux sources se
+fait par une clé de nom normalisée (`cle_correspondance()` dans
+`filtrer_francophone.py`) qui ignore les accents, la casse, la ponctuation et
+les mentions de qualité (HD, 4K...), pour repérer qu'une même chaîne est
+désignée différemment d'une source à l'autre.
+
+Les chaînes présentes **uniquement** chez iptv-org sont ajoutées en bonus aux
+playlists par pays/catégorie, ET listées séparément dans
+`output/bonus_iptv_org.m3u` pour audit — pratique pour vérifier rapidement ce
+que la seconde source a apporté à chaque mise à jour.
+
+**Bascule automatique** : si une des deux sources est injoignable au moment
+de la génération, le script continue avec l'autre source seule (avec un
+message clair dans les logs). Si les **deux** sources sont injoignables, le
+script s'arrête sans rien modifier — les fichiers déjà publiés (dernière
+version connue) restent en place plutôt que de publier une playlist vide.
 
 ## Comment les chaînes sont classées par catégorie
 
@@ -56,7 +82,8 @@ Catégories utilisées :
 ├── filtrer_francophone.py    # Script de génération des playlists
 ├── output/                   # Playlists générées (par le workflow ou en local)
 │   ├── francophone.m3u                    # Toutes les chaînes, group-title = pays
-│   ├── toutes_chaines_par_categorie.m3u   # Toutes les chaînes, group-title = catégorie
+│   ├── toutes_categories.m3u              # Toutes les chaînes, group-title = catégorie
+│   ├── bonus_iptv_org.m3u                 # Audit : chaînes ajoutées par iptv-org uniquement
 │   ├── par_pays/
 │   │   ├── France.m3u
 │   │   ├── Cameroon.m3u
@@ -103,7 +130,7 @@ Le workflow `.github/workflows/update.yml` :
 2. Exécute `filtrer_francophone.py` pour régénérer tous les fichiers dans
    `output/`.
 3. Commit et pousse les fichiers mis à jour (`output/francophone.m3u`,
-   `output/toutes_chaines_par_categorie.m3u`, `output/par_pays/`,
+   `output/toutes_categories.m3u`, `output/par_pays/`,
    `output/par_categorie/`).
 4. Publie le contenu de `output/` sur GitHub Pages, ce qui permet d'utiliser
    des URLs stables comme :

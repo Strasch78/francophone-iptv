@@ -28,11 +28,18 @@ import unicodedata
 import requests
 
 URL_ROMAXA = "https://romaxa55.github.io/world_ip_tv/output/index.m3u"
+URL_IPTV_ORG = "https://iptv-org.github.io/iptv/languages/fra.m3u"
 DOSSIER_SORTIE = "output"
 FICHIER_SORTIE = f"{DOSSIER_SORTIE}/francophone.m3u"
 DOSSIER_PAR_PAYS = f"{DOSSIER_SORTIE}/par_pays"
 DOSSIER_PAR_CATEGORIE = f"{DOSSIER_SORTIE}/par_categorie"
 FICHIER_TOUTES_CATEGORIES = f"{DOSSIER_SORTIE}/toutes_categories.m3u"
+FICHIER_BONUS_IPTVORG = f"{DOSSIER_SORTIE}/bonus_iptv_org.m3u"
+
+# Pays par défaut attribué aux chaînes bonus iptv-org dont le group-title
+# d'origine ne correspond à aucun pays francophone reconnu (ex: iptv-org
+# n'indique parfois qu'une catégorie, pas un pays).
+PAYS_PAR_DEFAUT_IPTVORG = "Francophonie (iptv-org)"
 
 # ---------------------------------------------------------------------------
 # 1. Pays francophones retenus
@@ -127,7 +134,7 @@ CHAINE_CATEGORIE = {
     "Acerfi TV": "general",
     "ACN TV": "diaspora",
     "ACTV": "diaspora",
-    "ADN TV+": "jeunesse",
+    "ADN TV+": "general",
     "ADO TV": "general",
     "Aflam": "cine",
     "Africa 24": "info",
@@ -192,7 +199,7 @@ CHAINE_CATEGORIE = {
     "Caillou": "jeunesse",
     "CAM 10 TV": "general",
     "Canaf54 TV": "diaspora",
-    "Canal 2 International": "info",
+    "Canal 2 International": "general",
     "Canal Alpha Jura": "regional",
     "Canal Alpha Neuchatel": "regional",
     "Canal J HD": "jeunesse",
@@ -229,7 +236,7 @@ CHAINE_CATEGORIE = {
     "Compassion TV": "religion",
     "Couleur 3": "musique",
     "Cowboy Channel": "sport",
-    "CRTV": "info",
+    "CRTV": "general",
     "CRTV News": "info",
     "CTV 2 Atlantic": "regional",
     "D3 TV": "general",
@@ -311,7 +318,7 @@ CHAINE_CATEGORIE = {
     "Isibo TV": "general",
     "Ivoire Channel": "general",
     "Japanim TV": "jeunesse",
-    "Kajou TV": "jeunesse",
+    "Kajou TV": "general",
     "Kalac TV": "general",
     "Kanade": "musique",
     "KassouaTV": "general",
@@ -634,6 +641,23 @@ def nettoyer_nom_chaine(nom: str) -> str:
     return nom.strip()
 
 
+_MOTS_QUALITE = {"hd", "fhd", "uhd", "shd", "4k", "hq", "sd", "tv"}
+
+
+def cle_correspondance(nom: str) -> str:
+    """Clé de rapprochement entre les DEUX sources (Romaxa / iptv-org) pour
+    savoir si deux entrées désignent la même chaîne. Plus agressive que
+    nettoyer_nom_chaine (utilisée pour l'affichage/la catégorisation) :
+    on retire aussi les mentions de qualité (HD, 4K...) et la ponctuation,
+    car les deux sources n'orthographient pas toujours les noms à
+    l'identique (ex: "France 24" vs "France24 (1080p)")."""
+    n = nettoyer_nom_chaine(nom)
+    n = normaliser(n)
+    n = re.sub(r"[^\w\s]", " ", n)  # ponctuation -> espace
+    mots = [m for m in n.split() if m not in _MOTS_QUALITE]
+    return " ".join(mots)
+
+
 def categoriser_chaine(nom: str) -> str:
     """Retourne le code de catégorie d'une chaîne à partir de son nom
     complet (avec résolution/tags éventuels)."""
@@ -681,9 +705,22 @@ def telecharger_m3u(url: str, tentatives: int = 3) -> list[str]:
     raise derniere_erreur
 
 
+def telecharger_source(nom_source: str, url: str, tentatives: int = 3) -> list[str] | None:
+    """Comme telecharger_m3u, mais NE LÈVE JAMAIS d'exception : renvoie
+    None si la source est injoignable après toutes les tentatives, pour
+    permettre au reste du programme de basculer automatiquement sur
+    l'autre source plutôt que de tout faire planter."""
+    try:
+        return telecharger_m3u(url, tentatives=tentatives)
+    except requests.exceptions.RequestException as e:
+        print(f"[{nom_source}] ❌ Source injoignable après {tentatives} tentatives : {e}")
+        return None
+
+
 def extraire_chaines(lignes: list[str]) -> list[dict]:
-    """Parcourt le M3U source et renvoie la liste des chaînes des pays
-    francophones, sous forme de dicts {pays, nom, logo, url}."""
+    """Parcourt le M3U source Romaxa et renvoie la liste des chaînes des
+    pays francophones, sous forme de dicts {pays, nom, logo, url,
+    source}."""
     chaines = []
     for index, ligne in enumerate(lignes):
         if not ligne.startswith("#EXTINF"):
@@ -702,8 +739,68 @@ def extraire_chaines(lignes: list[str]) -> list[dict]:
         nom = ligne.split(",", 1)[-1].strip()
         match_logo = re.search(r'tvg-logo="([^"]*)"', ligne)
         logo = match_logo.group(1) if match_logo else ""
-        chaines.append({"pays": pays, "nom": nom, "logo": logo, "url": url})
+        chaines.append({"pays": pays, "nom": nom, "logo": logo, "url": url, "source": "romaxa"})
     return chaines
+
+
+def extraire_chaines_iptvorg(lignes: list[str]) -> list[dict]:
+    """Parcourt le M3U iptv-org (déjà filtré par langue française à la
+    source -> https://iptv-org.github.io/iptv/languages/fra.m3u), sans
+    filtrage supplémentaire par pays. Le pays affiché est celui du
+    group-title d'origine s'il correspond à un pays francophone reconnu,
+    sinon un pays générique "Francophonie (iptv-org)" est utilisé, afin
+    que la chaîne ne soit pas perdue faute de correspondance exacte."""
+    chaines = []
+    for index, ligne in enumerate(lignes):
+        if not ligne.startswith("#EXTINF"):
+            continue
+        if index + 1 >= len(lignes):
+            continue
+        url = lignes[index + 1].strip()
+        if not url or url.startswith("#"):
+            continue
+
+        match_groupe = re.search(r'group-title="([^"]*)"', ligne)
+        groupe_origine = match_groupe.group(1) if match_groupe else ""
+        pays = groupe_origine if normaliser(groupe_origine) in PAYS_FRANCOPHONES else PAYS_PAR_DEFAUT_IPTVORG
+
+        nom = ligne.split(",", 1)[-1].strip()
+        if not nom:
+            continue
+        match_logo = re.search(r'tvg-logo="([^"]*)"', ligne)
+        logo = match_logo.group(1) if match_logo else ""
+        chaines.append({
+            "pays": pays, "nom": nom, "logo": logo, "url": url,
+            "source": "iptv-org",
+        })
+    return chaines
+
+
+def fusionner_sources(chaines_romaxa: list[dict], chaines_iptvorg: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Fusionne les deux sources : Romaxa est prioritaire (vérifiée toutes
+    les 6h côté source), donc en cas de même chaîne des deux côtés on garde
+    la version Romaxa et on jette le doublon iptv-org. Les chaînes
+    présentes UNIQUEMENT chez iptv-org sont ajoutées en bonus.
+
+    Renvoie (chaines_fusionnees, chaines_bonus_ajoutees)."""
+    cles_romaxa = {cle_correspondance(c["nom"]) for c in chaines_romaxa}
+
+    bonus = []
+    cles_bonus_vues = set()
+    for c in chaines_iptvorg:
+        cle = cle_correspondance(c["nom"])
+        if not cle or cle in cles_romaxa or cle in cles_bonus_vues:
+            continue
+        cles_bonus_vues.add(cle)
+        bonus.append(c)
+
+    for c in chaines_romaxa:
+        c.setdefault("source", "romaxa")
+
+    return chaines_romaxa + bonus, bonus
+
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -787,38 +884,64 @@ def generer_par_categorie(chaines_uniques: list[dict]) -> dict:
     return stats
 
 
+def ecrire_bonus_iptvorg(bonus: list[dict]) -> None:
+    """Fichier d'audit listant UNIQUEMENT les chaînes ajoutées par la
+    source secondaire iptv-org (absentes de Romaxa), pour que tu puisses
+    vérifier facilement ce qui a été ajouté à chaque mise à jour."""
+    ecrire_m3u(FICHIER_BONUS_IPTVORG, sorted(bonus, key=lambda c: c["nom"].lower()), lambda c: c["pays"])
+
+
 def main():
-    print("1. Téléchargement du M3U global Romaxa...")
-    lignes = telecharger_m3u(URL_ROMAXA)
+    print("1. Téléchargement des sources...")
+    lignes_romaxa = telecharger_source("romaxa", URL_ROMAXA)
+    lignes_iptvorg = telecharger_source("iptv-org", URL_IPTV_ORG)
 
-    print("2. Extraction des chaînes des pays francophones...")
-    chaines = extraire_chaines(lignes)
-    print(f"   -> {len(chaines)} entrées trouvées (avant déduplication)")
+    if lignes_romaxa is None and lignes_iptvorg is None:
+        print("❌ Les DEUX sources sont injoignables. Abandon : les fichiers de")
+        print("   sortie existants ne sont PAS modifiés (on garde la dernière")
+        print("   version connue plutôt que de publier une playlist vide).")
+        raise SystemExit(1)
 
-    print("3. Génération des fichiers par pays...")
+    print("2. Extraction des chaînes francophones...")
+    chaines_romaxa = extraire_chaines(lignes_romaxa) if lignes_romaxa is not None else []
+    chaines_iptvorg = extraire_chaines_iptvorg(lignes_iptvorg) if lignes_iptvorg is not None else []
+    print(f"   -> Romaxa   : {len(chaines_romaxa)} entrées"
+          + (" (source indisponible, ignorée)" if lignes_romaxa is None else ""))
+    print(f"   -> iptv-org : {len(chaines_iptvorg)} entrées"
+          + (" (source indisponible, ignorée)" if lignes_iptvorg is None else ""))
+
+    print("3. Fusion des deux sources (Romaxa prioritaire en cas de doublon)...")
+    chaines, bonus = fusionner_sources(chaines_romaxa, chaines_iptvorg)
+    print(f"   -> {len(bonus)} chaînes ajoutées en bonus depuis iptv-org")
+
+    print("4. Génération des fichiers par pays...")
     stats_pays = generer_par_pays(chaines)
     total_pays = sum(stats_pays.values())
     print(f"   -> {len(stats_pays)} pays, {total_pays} chaînes au total")
     for pays in sorted(stats_pays):
         print(f"      - {pays}: {stats_pays[pays]} chaînes")
 
-    print("4. Déduplication globale (par URL) pour le classement par catégorie...")
+    print("5. Déduplication globale (par URL) pour le classement par catégorie...")
     chaines_uniques = dedupliquer(chaines)
     print(f"   -> {len(chaines_uniques)} chaînes uniques (sur {len(chaines)} entrées)")
 
-    print("5. Génération des fichiers par catégorie...")
+    print("6. Génération des fichiers par catégorie...")
     stats_cat = generer_par_categorie(chaines_uniques)
     for cat in sorted(stats_cat):
         print(f"      - {cat}: {stats_cat[cat]} chaînes")
 
-    print("6. Génération du fichier plat classique (rétrocompatibilité)...")
+    print("7. Génération du fichier plat classique (rétrocompatibilité)...")
     ecrire_m3u(FICHIER_SORTIE, chaines_uniques, lambda c: c["pays"])
+
+    print("8. Génération du fichier d'audit des chaînes bonus iptv-org...")
+    ecrire_bonus_iptvorg(bonus)
 
     print("✅ Terminé.")
     print(f"   Fichiers par pays      : {DOSSIER_PAR_PAYS}/")
     print(f"   Fichiers par catégorie : {DOSSIER_PAR_CATEGORIE}/")
     print(f"   Fichier combiné        : {FICHIER_TOUTES_CATEGORIES}")
     print(f"   Fichier plat           : {FICHIER_SORTIE}")
+    print(f"   Audit bonus iptv-org   : {FICHIER_BONUS_IPTVORG}")
 
 
 if __name__ == "__main__":

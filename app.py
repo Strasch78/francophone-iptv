@@ -14,9 +14,12 @@ import traceback
 from flask import Flask, Response, abort
 from filtrer_francophone import (
     URL_ROMAXA,
+    URL_IPTV_ORG,
     CATEGORIES,
-    telecharger_m3u,
+    telecharger_source,
     extraire_chaines,
+    extraire_chaines_iptvorg,
+    fusionner_sources,
     dedupliquer,
     categoriser_chaine,
     nom_fichier_valide,
@@ -35,28 +38,43 @@ _cache = {
 
 
 def rafraichir(force_refresh: bool = False) -> None:
-    """Télécharge + extrait, stocke le résultat (ou l'erreur) dans _cache.
-    Ne relance JAMAIS d'exception : toute erreur est capturée et loggée
-    clairement dans le terminal."""
+    """Télécharge les DEUX sources (Romaxa + iptv-org) et les fusionne.
+    Ne relance JAMAIS d'exception : si une source échoue, on continue avec
+    l'autre ; si les DEUX échouent, on garde le cache précédent tel quel
+    (pas de playlist vide) et on note l'erreur uniquement à titre
+    informatif."""
     if _cache["chaines"] is not None and not force_refresh:
         return
 
+    print("[refresh] Téléchargement des sources (romaxa + iptv-org)...")
+    lignes_romaxa = telecharger_source("romaxa", URL_ROMAXA)
+    lignes_iptvorg = telecharger_source("iptv-org", URL_IPTV_ORG)
+
+    if lignes_romaxa is None and lignes_iptvorg is None:
+        _cache["erreur"] = "Les deux sources (romaxa et iptv-org) sont injoignables."
+        print(f"[refresh] ❌ {_cache['erreur']} Cache précédent conservé.")
+        return
+
     try:
-        print("[refresh] Téléchargement du M3U source...")
-        lignes = telecharger_m3u(URL_ROMAXA)
-        print(f"[refresh] {len(lignes)} lignes reçues, extraction en cours...")
-        chaines = extraire_chaines(lignes)
+        chaines_romaxa = extraire_chaines(lignes_romaxa) if lignes_romaxa is not None else []
+        chaines_iptvorg = extraire_chaines_iptvorg(lignes_iptvorg) if lignes_iptvorg is not None else []
+        chaines, bonus = fusionner_sources(chaines_romaxa, chaines_iptvorg)
+
         _cache["chaines"] = chaines
         _cache["chaines_uniques"] = dedupliquer(chaines)
         _cache["erreur"] = None
         print(
-            f"[refresh] OK -> {len(chaines)} entrées, "
-            f"{len(_cache['chaines_uniques'])} chaînes uniques"
+            f"[refresh] OK -> romaxa: {len(chaines_romaxa)} entrées, "
+            f"iptv-org: {len(chaines_iptvorg)} entrées, "
+            f"{len(bonus)} chaînes bonus, "
+            f"{len(_cache['chaines_uniques'])} chaînes uniques au total"
         )
     except Exception as e:
         _cache["erreur"] = str(e)
         print("[refresh] ❌ ERREUR pendant la génération de la playlist :")
         traceback.print_exc()
+
+
 
 
 def _m3u_texte(chaines, group_title_fn) -> str:
