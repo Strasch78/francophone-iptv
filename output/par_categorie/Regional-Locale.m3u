@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #EXTM3U
 #EXTINF:-1 tvg-logo="https://i.imgur.com/090tCQ5.png" group-title="Regional-Locale",Alpe d’Huez TV (720p) [Not 24/7]
 https://edge13.vedge.infomaniak.com/livecast/ik:adhtv/manifest.m3u8
@@ -63,3 +64,70 @@ https://tv7.live-kd.com/live/tv7/livestream/playlist.m3u8
 https://5dd226f8f01e8.streamlock.net/via-matele-live/matelelive_1080/playlist.m3u8
 #EXTINF:-1 tvg-logo="https://i.imgur.com/TLZsAKK.png" group-title="Regional-Locale",viàTéléPaese (720p)
 https://srv.webtvmanager.fr:3970/live/viatelepaeselive.m3u8
+=======
+#EXTM3U
+#EXTINF:-1 tvg-logo="https://i.imgur.com/090tCQ5.png" group-title="Regional-Locale",Alpe d’Huez TV (720p) [Not 24/7]
+https://edge13.vedge.infomaniak.com/livecast/ik:adhtv/manifest.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/EPIMMaB.png" group-title="Regional-Locale",Antenne Réunion (720p) [Not 24/7]
+https://live-antenne-reunion.zeop.tv/live/c3eds/antreunihd/hls_fta/antreunihd.m3u8?location=ZEOP01
+#EXTINF:-1 tvg-logo="https://i.imgur.com/y94bhqX.jpg" group-title="Regional-Locale",Brionnais TV (720p)
+https://stream2.mandarine.media/brionnaistv/brionnaistv/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/0OkSa6c.png" group-title="Regional-Locale",BX1 (720p) [Not 24/7]
+https://59959724487e3.streamlock.net/stream/live/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/eQ8xHK9.jpg" group-title="Regional-Locale",Canal Alpha Jura (1080p)
+https://canalalphaju.vedge.infomaniak.com/livecast/ik:canalalphaju/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/eQ8xHK9.jpg" group-title="Regional-Locale",Canal Alpha Neuchatel (1080p) [Not 24/7]
+https://canalalpha.vedge.infomaniak.com/livecast/ik:canalalpha/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/atlgnum.png" group-title="Regional-Locale",Cannes Lérins TV (1080p)
+https://vdo2.pro-fhi.net:3628/live/uppodsfqlive.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/CTV_logo_2018.svg/960px-CTV_logo_2018.svg.png" group-title="Regional-Locale",CFTO-DT (720p)
+http://stream.cammonitorplus.net/1712/index.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/EpMawIy.png" group-title="Regional-Locale",CHCO-TV (720p) [Geo-blocked]
+https://temp4.isilive.ca/live/CHCOTV/live/index.m3u8
+#EXTINF:-1 tvg-logo="https://m.media-amazon.com/images/I/51Icdznow+L.png" group-title="Regional-Locale",CityNews Calgary (720p)
+https://citynewsregional.akamaized.net/hls/live/1024053/Regional_Live_8/master.m3u8
+#EXTINF:-1 tvg-logo="https://m.media-amazon.com/images/I/51Icdznow+L.png" group-title="Regional-Locale",CityNews Edmonton
+https://citynewsregional.akamaized.net/hls/live/1024053/Regional_Live_8/Video-2Mbps.m3u8
+#EXTINF:-1 tvg-logo="https://m.media-amazon.com/images/I/51Icdznow+L.png" group-title="Regional-Locale",CityNews Toronto (720p)
+https://citynewsregional.akamaized.net/hls/live/1024052/Regional_Live_7/master.m3u8
+#EXTINF:-1 tvg-logo="https://m.media-amazon.com/images/I/51Icdznow+L.png" group-title="Regional-Locale",CityNews Vancouver (720p)
+https://citynewsregional.akamaized.net/hls/live/1024054/Regional_Live_9/master.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/CTV_2_2018.svg/960px-CTV_2_2018.svg.png" group-title="Regional-Locale",CTV 2 Atlantic (720p)
+http://stream.cammonitorplus.net/1731/index.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/2dLYZsc.png" group-title="Regional-Locale",Dudelange TV (720p)
+https://streamer20.multimedia.blue/Eltrona/DudelangeTV/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/ETB_Basque_2022_logo.svg/512px-ETB_Basque_2022_logo.svg.png" group-title="Regional-Locale",ETB Basque (480p)
+https://multimedia.eitb.eus/live-content/eitbbasque-hls/master.m3u8
+#EXTINF:-1 tvg-logo="https://i.ibb.co/xXZ5kFy/unnamed.jpg" group-title="Regional-Locale",Louga TV (480p)
+https://stream.sen-gt.com/Mbacke/myStream/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/THnWggV.jpg" group-title="Regional-Locale",Mamer TV (1080p)
+https://streamer20.multimedia.blue/Eltrona/MamerTV/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/rw72POr.png" group-title="Regional-Locale",MaTele (1080p) [Not 24/7]
+https://live.matele.be/hls/live.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/Vdc1GYP.jpg" group-title="Regional-Locale",MierschTV (1080p)
+https://streamer20.multimedia.blue/Eltrona/merschTV/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://upload.wikimedia.org/wikipedia/en/b/bd/CJON-TV.PNG" group-title="Regional-Locale",Newfoundland Television (480p)
+https://2-fss-1.streamhoster.com/pl_122/201748-1431018-1/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/fGS55nR.png" group-title="Regional-Locale",Notele (576p) [Not 24/7]
+https://streaming01.divercom.be/notele_live/direct.stream/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/qeaD5Az.png" group-title="Regional-Locale",Pétange Info TV (720p)
+https://streamer20.multimedia.blue/Eltrona/PetangeTV/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/OvnRplq.png" group-title="Regional-Locale",Radio TV Basse-Terre (720p)
+https://vdo.ssl-stream.com:3412/stream/play.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/hQ0Q6nE.png" group-title="Regional-Locale",RHT Guadeloupe (720p)
+https://edge12.vedge.infomaniak.com/livecast/ik:livehautetension/manifest.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/TuIAkA3.png" group-title="Regional-Locale",Telesambre (504p)
+https://dlgt0tdl2hpq3.cloudfront.net/rtbf/clr-rtbf/2f00284b/index.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/u6dLKa9.png" group-title="Regional-Locale",TeleTicino (720p)
+https://vstream-cdn.ch/hls/teleticino.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/YJYdHKO.png" group-title="Regional-Locale",Toronto 360 TV (720p) [Not 24/7]
+http://cdn3.toronto360.tv:8081/toronto360/hd/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.ibb.co/fQrBY1M/tr24-telepack.jpg" group-title="Regional-Locale",TR24 (720p)
+https://stream.it-innov.com/tr24/index.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/kSdGi43.png" group-title="Regional-Locale",TV7 Colmar (576p)
+https://tv7.live-kd.com/live/tv7/livestream/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/XVCV9rj.png" group-title="Regional-Locale",ViàMatélé (1080p)
+https://5dd226f8f01e8.streamlock.net/via-matele-live/matelelive_1080/playlist.m3u8
+#EXTINF:-1 tvg-logo="https://i.imgur.com/TLZsAKK.png" group-title="Regional-Locale",viàTéléPaese (720p)
+https://srv.webtvmanager.fr:3970/live/viatelepaeselive.m3u8
+>>>>>>> 455e28a51db60feb1fffb3ba111790d1b38f08b8
