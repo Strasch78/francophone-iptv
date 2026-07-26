@@ -6,6 +6,7 @@ on:
   workflow_dispatch:          # bouton "Run workflow" manuel sur GitHub
 
 permissions:
+  contents: read
   pages: write
   id-token: write
 
