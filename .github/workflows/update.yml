@@ -36,7 +36,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/francophone.m3u output/toutes_chaines_par_categorie.m3u output/par_pays output/par_categorie
+          git add output/francophone.m3u output/toutes_categories.m3u output/par_pays output/par_categorie
           git diff --quiet --cached || git commit -m "Update francophone playlist"
           git push
 

@@ -10,7 +10,7 @@ Filtre les chaînes francophones du dépôt Romaxa (world_ip_tv)
    - un fichier M3U par pays          -> output/par_pays/<Pays>.m3u
    - un fichier M3U par catégorie     -> output/par_categorie/<Categorie>.m3u
    - un fichier M3U combiné classé
-     par catégorie (group-title = catégorie) -> output/toutes_chaines_par_categorie.m3u
+     par catégorie (group-title = catégorie) -> output/toutes_categories.m3u
    - le fichier "à plat" habituel     -> output/francophone.m3u
 
 La catégorie de chaque chaîne n'est PAS déduite uniquement de mots-clés
@@ -23,6 +23,7 @@ totalement inconnue qui n'existerait pas encore dans le dictionnaire.
 
 import os
 import re
+import time
 import unicodedata
 import requests
 
@@ -31,7 +32,7 @@ DOSSIER_SORTIE = "output"
 FICHIER_SORTIE = f"{DOSSIER_SORTIE}/francophone.m3u"
 DOSSIER_PAR_PAYS = f"{DOSSIER_SORTIE}/par_pays"
 DOSSIER_PAR_CATEGORIE = f"{DOSSIER_SORTIE}/par_categorie"
-FICHIER_TOUTES_CATEGORIES = f"{DOSSIER_SORTIE}/toutes_chaines_par_categorie.m3u"
+FICHIER_TOUTES_CATEGORIES = f"{DOSSIER_SORTIE}/toutes_categories.m3u"
 
 # ---------------------------------------------------------------------------
 # 1. Pays francophones retenus
@@ -661,10 +662,23 @@ def nom_fichier_valide(texte: str) -> str:
 # 3. Téléchargement et extraction des chaînes
 # ---------------------------------------------------------------------------
 
-def telecharger_m3u(url: str) -> list[str]:
-    r = requests.get(url, timeout=30)
-    r.raise_for_status()
-    return r.text.splitlines()
+def telecharger_m3u(url: str, tentatives: int = 3) -> list[str]:
+    """Télécharge le M3U source avec un timeout généreux et des tentatives
+    automatiques en cas de coupure/lenteur réseau (le fichier source est
+    volumineux, un simple aléa réseau ne doit pas faire planter le
+    rafraîchissement)."""
+    derniere_erreur = None
+    for tentative in range(1, tentatives + 1):
+        try:
+            r = requests.get(url, timeout=(10, 60))  # (connexion, lecture)
+            r.raise_for_status()
+            return r.text.splitlines()
+        except requests.exceptions.RequestException as e:
+            derniere_erreur = e
+            print(f"[telecharger_m3u] Tentative {tentative}/{tentatives} échouée : {e}")
+            if tentative < tentatives:
+                time.sleep(3 * tentative)  # backoff : 3s, 6s, ...
+    raise derniere_erreur
 
 
 def extraire_chaines(lignes: list[str]) -> list[dict]:

@@ -17,3 +17,9 @@ liste_francophone.m3u
 .vscode/mise à jour/
 mise à jour/
 *.zip
+
+
+# Fichiers lourds à ne pas versionner
+*.m3u
+*.csv
+*.txt
